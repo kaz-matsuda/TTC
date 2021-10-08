@@ -22,16 +22,16 @@ def force_int(val):
 
 # read CSVs
 try:
-    with open('preference.csv') as f:
+    with open('preference.csv', encoding="utf-8") as f:
         reader = csv.reader(f)
         orig_preferences = [list(map(force_int,row)) for row in reader]
 except Exception:
-    with open('test.csv') as f:
+    with open('test.csv', encoding="utf-8") as f:
         reader = csv.reader(f)
         orig_preferences = [list(map(force_int,row)) for row in reader]
 
 try:
-    with open('AllStudentList.csv') as f:
+    with open('AllStudentList.csv', encoding="utf-8") as f:
         reader = csv.reader(f)
         student_list = [row for row in reader]
         student_map = {}
@@ -163,7 +163,7 @@ for slot in CI(38,56):
 
 # afterTTC.csvファイルの作成
 
-g = open('afterTTC.csv', 'w')
+g = open('afterTTC.csv', 'w', encoding="utf-8")
 
 for i, applicant in enumerate(resulting_preferences):
     try:
