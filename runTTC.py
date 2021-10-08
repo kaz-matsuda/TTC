@@ -219,12 +219,15 @@ all_cycles.sort()
 
 print("""{} run in \"{}\" mode:
 There are {} cycles found, the largest of which being:
+{},
+and the smallest:
 {}.
 There have been {} unmatched nodes, namely:
 {}.""".format(
     sys.argv[0],
     mode,
     len(all_cycles),
+    all_cycles[0],
     all_cycles[-1],
     n_residual,
     residual.nodes
