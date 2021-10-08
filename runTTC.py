@@ -12,13 +12,15 @@ import csv
 import TTC
 
 
-# read CSVs
+# a brutality
 def force_int(val):
     try:
         return int(val)
     except Exception:
         return 0
 
+
+# read CSVs
 try:
     with open('preference.csv') as f:
         reader = csv.reader(f)
@@ -26,7 +28,7 @@ try:
 except Exception:
     with open('test.csv') as f:
         reader = csv.reader(f)
-        orig_preferences = [list(map(force_int,row)) for row in reader] #[row for row in reader]
+        orig_preferences = [list(map(force_int,row)) for row in reader]
 
 try:
     with open('AllStudentList.csv') as f:
@@ -34,7 +36,7 @@ try:
         student_list = [row for row in reader]
         student_map = {}
         for student in student_list:
-            student_map[int(student[7])] = {
+            student_map[force_int(student[7])] = {
                 "name":student[12],
                 "barcode":student[22],
                 "original_date":student[19],
@@ -168,7 +170,7 @@ for i, applicant in enumerate(resulting_preferences):
         #g.write(applicant[57] + ',' + applicant[58] + ',' + applicant[59] + ',' + applicant[60] + ',' + applicant[61] + ',')
         student_ID = applicant[58]
         student = student_map[student_ID]
-        g.write(student["barcode"] + ',' + student["name"] + ',' + student["original_date"] + ',' + student["original_time"])
+        g.write(student["barcode"] + ',' + str(student_ID) + ',' + student["name"] + ',' + student["original_date"] + ',' + student["original_time"] + ',')
     except Exception:
         g.write('')
     # applicant No.i の, 交換前のスロットを書き込む
