@@ -20,7 +20,7 @@ def force_int(val):
 try:
     with open('preference.csv') as f:
         reader = csv.reader(f)
-        orig_preferences = [row for row in reader]
+        orig_preferences = [list(map(force_int,row)) for row in reader]
 except Exception:
     with open('test.csv') as f:
         reader = csv.reader(f)
