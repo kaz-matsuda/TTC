@@ -59,7 +59,7 @@ def TTC(l):
     while i <= number_of_applicants:
         j = 1
         while j <= number_of_applicants:
-            if (i != j) and (l[i-1][int(l[j-1][0])] == '1'):
+            if (i != j) and (l[i-1][l[j-1][0]] == 1):
                 preferenceGraph.add_edge(i,j)
             j = j + 1
         i = i + 1
@@ -76,7 +76,7 @@ def TTC(l):
     while i <= number_of_applicants:
         j = 1
         while j <= number_of_applicants:
-            if (i != j) and (l[i-1][int(l[j-1][0])] == '2')  and not({i, j} & already_removed_nodes):
+            if (i != j) and (l[i-1][l[j-1][0]] == 2)  and not({i, j} & already_removed_nodes):
                 preferenceGraph2.add_edge(i,j)
             j = j + 1
         i = i + 1

@@ -9,6 +9,8 @@
 import csv
 import TTC
 
+
+# read CSVs
 try:
     with open('preference.csv') as f:
         reader = csv.reader(f)
@@ -16,11 +18,42 @@ try:
 except Exception:
     with open('test.csv') as f:
         reader = csv.reader(f)
-        orig_preferences = [row for row in reader]
+        orig_preferences = [list(map(int,row)) for row in reader] #[row for row in reader]
+
+try:
+    with open('AllStudentList.csv') as f:
+        reader = csv.reader(f)
+        student_list = [row for row in reader]
+        student_map = {}
+        for student in student_list:
+            student_map[int(student[7])] = {
+                "name":student[12],
+                "barcode":student[22],
+                "original_date":student[19],
+                "original_time":student[20],
+            }
+except Exception:
+    student_map = {}
+
+
+# sort the input (list of persons) lexicographically according to the following criteria
+# 1. those who can accept no change should be placed latter
+# 2. those who offer less options should be placed earlier
+def matching_difficulty(row):
+    # look at the value at the diagonal location to check if this person
+    # can be happy without any change
+    b = (0,1)[row[row[0]] <= 2]
+    # count the number of offered slots by this person
+    # NB: we do not differentiate between 1 (strong preference) and 2 (weak) here.
+    n = sum(map(lambda x: (0,1)[x <= 2], row[1:]))
+    return b,n
+
+sorted_preferences = sorted(orig_preferences, key=matching_difficulty)
 
 
 # apply TTC
-all_cycles, all_cycles2, residual = TTC.TTC(orig_preferences)
+all_cycles, all_cycles2, residual = TTC.TTC(sorted_preferences)
+#all_cycles, all_cycles2, residual = TTC.TTC(orig_preferences)
 
 
 # 全てのサイクルの辺 and all isolated points のリストを作成する
@@ -41,7 +74,7 @@ cycles_or_points.sort()
 #print(cycles_or_points)
 
 
-# define finite mappings from slot IDs (from 1 to 56) to dates
+# define finite mappings from slots (1--56) to dates
 
 # closed interval
 # NB: range(x, y) is [x, x+1, ..., y-1] and does NOT include y
@@ -88,9 +121,12 @@ for slot in CI(38,56):
 
 g = open('afterTTC.csv', 'w')
 
-for i, applicant in enumerate(orig_preferences):
+for i, applicant in enumerate(sorted_preferences):
     try:
-        g.write(applicant[57] + ',' + applicant[58] + ',' + applicant[59] + ',' + applicant[60] + ',' + applicant[61] + ',')
+        #g.write(applicant[57] + ',' + applicant[58] + ',' + applicant[59] + ',' + applicant[60] + ',' + applicant[61] + ',')
+        student_ID = applicant[58]
+        student = student_map[student_ID]
+        g.write(student["barcode"] + ',' + student["name"] + ',' + student["original_date"] + ',' + student["original_time"])
     except Exception:
         g.write('')
     # applicant No.i の, 交換前のスロットを書き込む
@@ -98,18 +134,20 @@ for i, applicant in enumerate(orig_preferences):
     # write 日付, time, min
     g.write(day_of_slot[slot])
     g.write(time_of_slot[slot])
-    g.write('{:2}'.format(minute_of_slot[slot]))
+    g.write(':')
+    g.write('{:02}'.format(minute_of_slot[slot]))
     # write delimiters
     g.write(',' + '->' + ',')
 
     # applicant No.i の交換が成立した場合, 交換後のスロットを書き込む
-    ID_or_failure = cycles_or_points[i][1]
-    if ID_or_failure != -1:
-        newslot = int(orig_preferences[ID_or_failure-1][0])
+    node_or_failure = cycles_or_points[i][1]
+    if node_or_failure != -1:
+        newslot = int(sorted_preferences[node_or_failure - 1][0])
         g.write(day_of_slot[newslot])
         g.write(time_of_slot[newslot])
-        g.write('{:2}'.format(minute_of_slot[newslot]))
-        g.write(',' + str(ID_or_failure) + '\n')
+        g.write(':')
+        g.write('{:02}'.format(minute_of_slot[newslot]))
+        g.write(',' + str(node_or_failure) + '\n')
     else:
         g.write('no match' + '\n')
 
