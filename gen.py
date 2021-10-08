@@ -6,6 +6,7 @@ f = open('test.csv', 'w')
 number_of_applicant = 800 # 交換希望者数
 number_of_slot = 56  # 総スロット数
 
+import math
 import random
 
 random.seed(100)
@@ -40,12 +41,12 @@ def makesankaku(a, b, k):
 while i <= number_of_applicant: # 人数分のpreferenceリストを作成
         originslotnumber = random.randint(1,number_of_slot) # 元々の予約スロットに対応する数字
         print(originslotnumber)
-        marunumber = 3*(random.randint(2, 6)) # ◯の個数, 6・9・12・15・18個のいずれか
+        marunumber = math.floor(random.expovariate(1) + 1)
         #print(marunumber)
         marunumberlist = rand_ints_nodup(1,number_of_slot,marunumber)
         marunumberlist.sort()
         print(marunumberlist)
-        sankakunumber = 3*(random.randint(2, 6)) # △の個数, 6・9・12・15・18個のいずれか
+        sankakunumber = math.floor(random.expovariate(1))
         print(sankakunumber)
         # △のスロットのリストを作成する
         sankakunumberlist = makesankaku(1, number_of_slot, sankakunumber)

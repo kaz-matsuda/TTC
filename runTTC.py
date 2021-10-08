@@ -6,6 +6,8 @@
 # afterTTC.csv の各行には, 左から順に
 #「交換希望者番号」「交換前のスロット」「->」「交換後のスロット」「交換相手」が出力されます
 
+import sys
+import random
 import csv
 import TTC
 
@@ -42,7 +44,9 @@ except Exception:
     student_map = {}
 
 
-# sort the input (list of persons) lexicographically according to the following criteria
+# keys for sorting the input (list of persons)
+
+# a lexicographic key coupling the following criteria
 # 1. those who can accept no change should be placed latter
 # 2. those who offer less options should be placed earlier
 def matching_difficulty(row):
@@ -54,12 +58,44 @@ def matching_difficulty(row):
     n = sum(map(lambda x: (0,1)[x <= 2], row[1:]))
     return b,n
 
-sorted_preferences = sorted(orig_preferences, key=matching_difficulty)
+# random key
+def shuffling_key(row):
+    return random.randint(1,1000000)
 
 
 # apply TTC
-all_cycles, all_cycles2, residual = TTC.TTC(sorted_preferences)
-#all_cycles, all_cycles2, residual = TTC.TTC(orig_preferences)
+try:
+    mode = sys.argv[1]
+except Exception:
+    mode = ""
+
+
+if mode == "original":
+    all_cycles, all_cycles2, residual = TTC.TTC(orig_preferences)
+    resulting_preferences = orig_preferences
+elif mode == "shuffled":
+    try:
+        seed = int(sys.argv[2])
+    except Exception:
+        seed = 100
+    random.seed(seed)
+    shuffled_preferences = sorted(orig_preferences, key=shuffling_key)
+    all_cycles, all_cycles2, residual = TTC.TTC(shuffled_preferences)
+    resulting_preferences = shuffled_preferences
+elif mode == "shuffled_and_sorted":
+    try:
+        seed = int(sys.argv[2])
+    except Exception:
+        seed = 100
+    random.seed(seed)
+    shuffled_preferences = sorted(orig_preferences, key=shuffling_key)
+    sorted_preferences = sorted(shuffled_preferences, key=matching_difficulty)
+    all_cycles, all_cycles2, residual = TTC.TTC(sorted_preferences)
+    resulting_preferences = sorted_preferences
+else:
+    sorted_preferences = sorted(orig_preferences, key=matching_difficulty)
+    all_cycles, all_cycles2, residual = TTC.TTC(sorted_preferences)
+    resulting_preferences = sorted_preferences
 
 
 # 全てのサイクルの辺 and all isolated points のリストを作成する
@@ -127,7 +163,7 @@ for slot in CI(38,56):
 
 g = open('afterTTC.csv', 'w')
 
-for i, applicant in enumerate(sorted_preferences):
+for i, applicant in enumerate(resulting_preferences):
     try:
         #g.write(applicant[57] + ',' + applicant[58] + ',' + applicant[59] + ',' + applicant[60] + ',' + applicant[61] + ',')
         student_ID = applicant[58]
@@ -136,7 +172,7 @@ for i, applicant in enumerate(sorted_preferences):
     except Exception:
         g.write('')
     # applicant No.i の, 交換前のスロットを書き込む
-    slot = int(applicant[0])
+    slot = applicant[0]
     # write 日付, time, min
     g.write(day_of_slot[slot])
     g.write(time_of_slot[slot])
@@ -148,7 +184,7 @@ for i, applicant in enumerate(sorted_preferences):
     # applicant No.i の交換が成立した場合, 交換後のスロットを書き込む
     node_or_failure = cycles_or_points[i][1]
     if node_or_failure != -1:
-        newslot = int(sorted_preferences[node_or_failure - 1][0])
+        newslot = resulting_preferences[node_or_failure - 1][0]
         g.write(day_of_slot[newslot])
         g.write(time_of_slot[newslot])
         g.write(':')
