@@ -215,7 +215,7 @@ g.close()
 n_residual = len(residual.nodes)
 n_covered = len(resulting_preferences) - n_residual
 
-all_cycles.sort()
+all_cycles.sort(key=len)
 
 print("""{} run in \"{}\" mode:
 There are {} cycles found, the largest of which being:
@@ -227,8 +227,8 @@ There have been {} unmatched nodes, namely:
     sys.argv[0],
     mode,
     len(all_cycles),
-    all_cycles[0],
     all_cycles[-1],
+    all_cycles[0],
     n_residual,
     residual.nodes
 ));
