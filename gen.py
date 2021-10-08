@@ -4,9 +4,11 @@
 f = open('test.csv', 'w')
 
 number_of_applicant = 800 # 交換希望者数
-number_of_slot = 54  # 総スロット数 : 3日×18枠 = 54
+number_of_slot = 56  # 総スロット数
 
 import random
+
+random.seed(100)
 
 i = 1
 j = 1
@@ -81,8 +83,6 @@ while i <= number_of_applicant: # 人数分のpreferenceリストを作成
         m = 1
         originslotnumber = 99
         print("\n")
-
-f.write('end')
 
 f.close()
  
