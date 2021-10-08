@@ -11,6 +11,12 @@ import TTC
 
 
 # read CSVs
+def force_int(val):
+    try:
+        return int(val)
+    except Exception:
+        return 0
+
 try:
     with open('preference.csv') as f:
         reader = csv.reader(f)
@@ -18,7 +24,7 @@ try:
 except Exception:
     with open('test.csv') as f:
         reader = csv.reader(f)
-        orig_preferences = [list(map(int,row)) for row in reader] #[row for row in reader]
+        orig_preferences = [list(map(force_int,row)) for row in reader] #[row for row in reader]
 
 try:
     with open('AllStudentList.csv') as f:
