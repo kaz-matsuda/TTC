@@ -10,6 +10,9 @@
 import sys
 import random
 import csv
+import numpy
+import matplotlib.pyplot as plt
+
 import TTC
 
 
@@ -213,22 +216,27 @@ g.close()
 ### Finally report some info onto stdout ###
 
 n_residual = len(residual.nodes)
-n_covered = len(resulting_preferences) - n_residual
 
-all_cycles.sort(key=len)
-
-print("""{} run in \"{}\" mode:
-There are {} cycles found, the largest of which being:
-{},
-and the smallest:
-{}.
+print("""{} run in \"{}\" mode: {} cycles found.
 There have been {} unmatched nodes, namely:
 {}.""".format(
     sys.argv[0],
     mode,
     len(all_cycles),
-    all_cycles[-1],
-    all_cycles[0],
     n_residual,
     residual.nodes
 ));
+
+try:
+    sizes = list(map(len, all_cycles))
+    sizes.sort()
+    largest = sizes[-1]
+    fig, ax = plt.subplots()
+    n, bins, patches = ax.hist(sizes, bins=numpy.arange(largest)+1.5, range=(1.5,largest+3.5))
+    ax.set_xticks(range(largest+1))
+    ax.set_yticks(n)
+    plt.title("The distribution of the sizes of the cycles found")
+    plt.show()
+except Exception:
+    0
+
