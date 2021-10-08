@@ -13,7 +13,7 @@ import csv
 import TTC
 
 
-### A brutality ###
+# a brutality
 def force_int(val):
     try:
         return int(val)
@@ -22,6 +22,7 @@ def force_int(val):
 
 
 ### Read CSVs ###
+
 try:
     with open('preference.csv', encoding="utf-8") as f:
         reader = csv.reader(f)
@@ -76,7 +77,8 @@ def shuffling_key(row):
     return random.randint(1,1000000)
 
 
-### Preprocess the list according to the command-line, then apply TTC  ###
+### Preprocess the list according to the command-line ###
+
 try:
     mode = sys.argv[1]
 except Exception:
@@ -102,24 +104,25 @@ elif mode == "shuffled_and_sorted":
     sorted_preferences = sorted(shuffled_preferences, key=matching_difficulty)
     resulting_preferences = sorted_preferences
 else:
+    mode = "sorted"
     sorted_preferences = sorted(orig_preferences, key=matching_difficulty)
     resulting_preferences = sorted_preferences
 
-all_cycles, all_cycles2, residual = TTC.TTC(resulting_preferences)
 
+### Apply TTC and collect all edges and isolated points from the result ###
 
-### Collect all edges and isolated points from the result of TTC ###
+cycles, cycles2, residual = TTC.TTC(resulting_preferences)
+all_cycles = cycles + cycles2
+
 cycles_or_points = []
 for cycle in all_cycles:
-    cycles_or_points += cycle
-for cycle in all_cycles2:
     cycles_or_points += cycle
 
 # the isolated points are represented by virtual edges of the form `[j, -1]`
 for j in residual.nodes:
     cycles_or_points.append([j, -1])
 
-# perform a (lexicographic) sort on edges
+# sort them lexicographically
 cycles_or_points.sort()
 
 
@@ -207,5 +210,22 @@ for i, applicant in enumerate(resulting_preferences):
 g.close()
 
 
-### Finally report the unmatched nodes to stdout ###
-print(residual.nodes)
+### Finally report some info onto stdout ###
+
+n_residual = len(residual.nodes)
+n_covered = len(resulting_preferences) - n_residual
+
+all_cycles.sort()
+
+print("""{} run in \"{}\" mode:
+There are {} cycles found, the largest of which being:
+{}.
+There have been {} unmatched nodes, namely:
+{}.""".format(
+    sys.argv[0],
+    mode,
+    len(all_cycles),
+    all_cycles[-1],
+    n_residual,
+    residual.nodes
+));
