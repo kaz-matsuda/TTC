@@ -1,7 +1,8 @@
 #  runTTC.py
-# This program reads the actual preference data that may contain students' privacy
-# and apply TTC.  The output is written to afterTTC and is a directed graph
-# which represents the result of conversions.
+# This program reads the actual preference data that may contain students' privacy,
+# and applies TTC to them.
+# The output is written to afterTTC.csv, which is a collection of the edges of
+# a directed graph representing the exchanges of the slots.
 # 出力されるデータのファイル名を'afterTTC.csv'としています
 # afterTTC.csv の各行には, 左から順に
 #「交換希望者番号」「交換前のスロット」「->」「交換後のスロット」「交換相手」が出力されます
@@ -12,7 +13,7 @@ import csv
 import TTC
 
 
-# a brutality
+### A brutality ###
 def force_int(val):
     try:
         return int(val)
@@ -20,7 +21,7 @@ def force_int(val):
         return 0
 
 
-# read CSVs
+### Read CSVs ###
 try:
     with open('preference.csv', encoding="utf-8") as f:
         reader = csv.reader(f)
@@ -46,34 +47,42 @@ except Exception:
     student_map = {}
 
 
-# keys for sorting the input (list of persons)
+### Keys for sorting the input (list of persons) ###
 
 # a lexicographic key coupling the following criteria
-# 1. those who can accept no change should be placed latter
-# 2. those who offer less options should be placed earlier
+# 1. those who does not necessarily need an exchange is to be placed
+#    in the latter part of the sorted list
+# 2. those who offer less options of exchange should appear sooner
 def matching_difficulty(row):
-    # look at the value at the diagonal location to check if this person
-    # can be happy without any change
+    # `row` lists the exchangable slots offered by a person.
+    # We first peek the value at the diagonal location:
+    # this value being 0 or 1 means that this person
+    # can be happy even without any change.
+    # We are going to partition the sorted list into two and place such persons
+    # in the latter part, hoping that the TTC algorithm be less likely to
+    # hit them when searching for a cycle.
+    # We should check if this strategy really works for the current algorithm,
+    # which is a simple depth-first search (see TTC.py).
     b = (0,1)[row[row[0]] <= 2]
-    # count the number of offered slots by this person
+    # Next, we count the number of offered slots by this person.
+    # This is the second component of the key returned by this function,
+    # rendering the sorted list increasing in this count in each partitions.
     # NB: we do not differentiate between 1 (strong preference) and 2 (weak) here.
     n = sum(map(lambda x: (0,1)[x <= 2], row[1:]))
     return b,n
 
-# random key
+# a random key used for shuffling
 def shuffling_key(row):
     return random.randint(1,1000000)
 
 
-# apply TTC
+### Preprocess the list according to the command-line, then apply TTC  ###
 try:
     mode = sys.argv[1]
 except Exception:
     mode = ""
 
-
 if mode == "original":
-    all_cycles, all_cycles2, residual = TTC.TTC(orig_preferences)
     resulting_preferences = orig_preferences
 elif mode == "shuffled":
     try:
@@ -82,7 +91,6 @@ elif mode == "shuffled":
         seed = 100
     random.seed(seed)
     shuffled_preferences = sorted(orig_preferences, key=shuffling_key)
-    all_cycles, all_cycles2, residual = TTC.TTC(shuffled_preferences)
     resulting_preferences = shuffled_preferences
 elif mode == "shuffled_and_sorted":
     try:
@@ -92,33 +100,30 @@ elif mode == "shuffled_and_sorted":
     random.seed(seed)
     shuffled_preferences = sorted(orig_preferences, key=shuffling_key)
     sorted_preferences = sorted(shuffled_preferences, key=matching_difficulty)
-    all_cycles, all_cycles2, residual = TTC.TTC(sorted_preferences)
     resulting_preferences = sorted_preferences
 else:
     sorted_preferences = sorted(orig_preferences, key=matching_difficulty)
-    all_cycles, all_cycles2, residual = TTC.TTC(sorted_preferences)
     resulting_preferences = sorted_preferences
 
+all_cycles, all_cycles2, residual = TTC.TTC(resulting_preferences)
 
-# 全てのサイクルの辺 and all isolated points のリストを作成する
+
+### Collect all edges and isolated points from the result of TTC ###
 cycles_or_points = []
-
 for cycle in all_cycles:
     cycles_or_points += cycle
-
 for cycle in all_cycles2:
     cycles_or_points += cycle
 
-# サイクルの辺に含まれない node i に対して, [i, -1] を追加しておく
+# the isolated points are represented by virtual edges of the form `[j, -1]`
 for j in residual.nodes:
     cycles_or_points.append([j, -1])
 
-# perform the lexicographic sort on edges (= two-elements lists)
+# perform a (lexicographic) sort on edges
 cycles_or_points.sort()
-#print(cycles_or_points)
 
 
-# define finite mappings from slots (1--56) to dates
+### Define finite mappings from slots (1--56) to dates, times, etc. ###
 
 # closed interval
 # NB: range(x, y) is [x, x+1, ..., y-1] and does NOT include y
@@ -161,16 +166,20 @@ for slot in CI(1,37):
 for slot in CI(38,56):
     minute_of_slot[slot] = ((slot+4)%6) * 10
 
-# afterTTC.csvファイルの作成
+
+### afterTTC.csvファイルの作成 ###
 
 g = open('afterTTC.csv', 'w', encoding="utf-8")
 
 for i, applicant in enumerate(resulting_preferences):
     try:
-        #g.write(applicant[57] + ',' + applicant[58] + ',' + applicant[59] + ',' + applicant[60] + ',' + applicant[61] + ',')
         student_ID = applicant[58]
         student = student_map[student_ID]
-        g.write(student["barcode"] + ',' + str(student_ID) + ',' + student["name"] + ',' + student["original_date"] + ',' + student["original_time"] + ',')
+        g.write(student["barcode"] + ','
+                + str(student_ID) + ','
+                + student["name"] + ','
+                + student["original_date"] + ','
+                + student["original_time"] + ',')
     except Exception:
         g.write('')
     # applicant No.i の, 交換前のスロットを書き込む
@@ -197,8 +206,6 @@ for i, applicant in enumerate(resulting_preferences):
 
 g.close()
 
-#list(map(print, all_cycles))
-#print(residual.nodes)
-#list(map(print, all_cycles2))
-print(residual.nodes)
 
+### Finally report the unmatched nodes to stdout ###
+print(residual.nodes)
