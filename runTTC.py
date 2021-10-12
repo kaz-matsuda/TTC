@@ -118,12 +118,12 @@ def matching_difficulty(row):
     # hit them when searching for a cycle.
     # We should check if this strategy really works for the current algorithm,
     # which is a simple depth-first search (see TTC.py).
-    b = (0,1)[row[row[0]] <= 2]
+    b = 1 if row[row[0]] <= 2 else 0
     # Next, we count the number of offered slots by this person.
     # This is the second component of the key returned by this function,
     # rendering the sorted list increasing in this count in each partitions.
     # NB: we do not differentiate between 1 (strong preference) and 2 (weak) here.
-    n = sum(map(lambda x: (0,1)[x <= 2], row[1:]))
+    n = sum(map(lambda x: 1 if x <= 2 else 0, row[1:]))
     return b,n
 def sort_pref(pref):
     return sorted(pref, key=matching_difficulty)

@@ -41,11 +41,11 @@ def Pull_out_all_cycles(preferenceGraph):
         cycle, residual = Pull_out_cycle(residual)
     return all_cycles, residual
 
-# input l : list read from some CSV
+# input pref : list read from some CSV
 # output all_cycles, all_cycles2, residual
-def TTC(l):
+def TTC(pref):
     # preference data に載っている人数
-    number_of_applicants = len(l)
+    number_of_applicants = len(pref)
     # preference データから有向グラフを作る
     preferenceGraph = nx.DiGraph()
     # 頂点の追加(個数 = number_of_applicants)
@@ -59,7 +59,7 @@ def TTC(l):
     while i <= number_of_applicants:
         j = 1
         while j <= number_of_applicants:
-            if (i != j) and (l[i-1][l[j-1][0]] == 1):
+            if (i != j) and (pref[i-1][pref[j-1][0]] == 1):
                 preferenceGraph.add_edge(i,j)
             j = j + 1
         i = i + 1
@@ -76,7 +76,7 @@ def TTC(l):
     while i <= number_of_applicants:
         j = 1
         while j <= number_of_applicants:
-            if (i != j) and (l[i-1][l[j-1][0]] == 2)  and not({i, j} & already_removed_nodes):
+            if (i != j) and (pref[i-1][pref[j-1][0]] == 2)  and not({i, j} & already_removed_nodes):
                 preferenceGraph2.add_edge(i,j)
             j = j + 1
         i = i + 1
