@@ -19,29 +19,22 @@ originslotnumber = 99
 preferencelist = []
 marunumberlist = []
 
-# random function
-def rand_ints_nodup(a, b, k):
-        ns = []
-        while len(ns) < k:
-                n = random.randint(a, b)
-                if not ((n in ns) or (n ==  originslotnumber)):
-                        ns.append(n)
-        return ns
+# Generates a non-duplicate sequence of integers randomly taken from [a, b];
+# k bounds the length of the generated list: the length is min(1+b-a, k).
+# The numbers listed in the final argument is removed from the candidate.
+def rand_ints_nodup_avoiding(a, b, k, avoid=[]):
+        ns = list(set(range(a,b+1)) - set(avoid))
+        random.shuffle(ns)
+        return ns[:k]
 
-def makesankaku(a, b, k):
-        ns2 = []
-        while len(ns2) < k:
-                n = random.randint(a, b)
-                if not ((n in ns2) or (n in marunumberlist) or (n == originslotnumber)):
-                        ns2.append(n)
-        return ns2
-                        
-                
+def rand_ints_nodup(a, b, k):
+        return rand_ints_nodup_avoiding(a,b,k,[])
 
 while i <= number_of_applicant: # 人数分のpreferenceリストを作成
         originslotnumber = random.randint(1,number_of_slot) # 元々の予約スロットに対応する数字
         print(originslotnumber)
-        marunumber = math.floor(random.expovariate(1) + 1)
+        #marunumber = math.floor(random.expovariate(1.0/15.0) + 1)
+        marunumber = math.floor(random.gauss(15, 0.2))
         #print(marunumber)
         marunumberlist = rand_ints_nodup(1,number_of_slot,marunumber)
         marunumberlist.sort()
@@ -49,7 +42,7 @@ while i <= number_of_applicant: # 人数分のpreferenceリストを作成
         sankakunumber = math.floor(random.expovariate(1))
         print(sankakunumber)
         # △のスロットのリストを作成する
-        sankakunumberlist = makesankaku(1, number_of_slot, sankakunumber)
+        sankakunumberlist = rand_ints_nodup_avoiding(1, number_of_slot, sankakunumber, marunumberlist)
         sankakunumberlist.sort()
         print(sankakunumberlist)
 
