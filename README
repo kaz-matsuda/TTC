@@ -1,0 +1,11 @@
+Requirements:
+
+- python3
+- pip packages: networkx, numpy, matplotlib (, pygobject)
+
+
+Synopsis:
+
+$ python3 gen.py
+$ python3 runTTC.py sort feedback
+
