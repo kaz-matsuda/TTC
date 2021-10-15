@@ -28,7 +28,7 @@ def force_int(val):
         return 0
 
 
-### Define finite mappings from slots (1--56) to dates, times, etc. ###
+### Define finite mappings from slots (1--51) to dates, times, etc. ###
 
 # closed interval
 # NB: range(x, y) is [x, x+1, ..., y-1] and does NOT include y
@@ -42,62 +42,61 @@ def expand_to_dict(ll):
             dict[i] = value
     return dict
 
-# 日付: 1~18:9/21, 19~37:9/22, 38~56:9/24
+# 日付: 1~18:10/19, 19~36:10/20, 37~51:10/22
 days = [
-    ('9/21 ', CI(1,18)),
-    ('9/22 ', CI(19,37)),
-    ('9/24 ', CI(38,56)),
+    ('10/19 ', CI(1,18)),
+    ('10/20 ', CI(19,36)),
+    ('10/22 ', CI(37,51)),
 ]
 day_of_slot = expand_to_dict(days)
 
-# 時: (1~6 or 19~24 or 38~43):14,
-# (7~12 or 25~30 or 44~49):15,
-# (13~18 or 31~36 or 50~55):16,
+# 時: (1~6 or 19~24 or 37~42):14,
+# (7~12 or 25~30 or 43~48):15,
+# (13~18 or 31~36 or 49~51):16,
 # (37 or 56):17    
 times = [
-    ('14', CI(1,6) + CI(19,24) + CI(38,43)),
-    ('15', CI(7,12) + CI(25,30) + CI(44,49)),
-    ('16', CI(13,18) + CI(31,36) + CI(50,55)),
-    ('17', [37,56]),
+    ('14', CI(1,6) + CI(19,24) + CI(37,42)),
+    ('15', CI(7,12) + CI(25,30) + CI(43,48)),
+    ('16', CI(13,18) + CI(31,36) + CI(49,51)),
+#    ('17', [37,56]),
 ]
 time_of_slot = expand_to_dict(times)
 
 # 分:slot が (((6で割った余り) + 5) を 6 で割った余り)×10
-# slot が 1~37 :  min/10 = (slot + 5) を 6 で割った余り
-# slot が 38~56 : min/10 = (slot + 4) を 6 で割った余り
+
 minute_of_slot = {}
-for slot in CI(1,37):
+for slot in CI(1,51):
     minute_of_slot[slot] = ((slot+5)%6) * 10
-for slot in CI(38,56):
-    minute_of_slot[slot] = ((slot+4)%6) * 10
+#for slot in CI(38,56):
+#    minute_of_slot[slot] = ((slot+4)%6) * 10
 
 
 ### Read CSVs ###
 
 try:
-    with open('preference.csv', encoding="utf-8") as f:
-        reader = csv.reader(f)
+    with open('preference.csv', encoding="utf-8") as pref:
+        reader = csv.reader(pref)
         preferences = [list(map(force_int,row)) for row in reader]
         debug_print("Read preferences.csv")
 except:
-    with open('test.csv', encoding="utf-8") as f:
-        reader = csv.reader(f)
+    with open('test.csv', encoding="utf-8") as pref:
+        reader = csv.reader(pref)
         preferences = [list(map(force_int,row)) for row in reader]
         debug_print("Read test.csv")
 
 try:
-    with open('AllStudentList.csv', encoding="utf-8") as f:
+    with open('2ndAllStudentList2.csv', encoding="utf-8") as f:
         reader = csv.reader(f)
         student_list = [row for row in reader]
         student_map = {}
         for student in student_list:
-            student_map[force_int(student[7])] = {
-                "name":student[12],
-                "barcode":student[22],
-                "original_date":student[19],
-                "original_time":student[20],
+            student_map[force_int(student[8])] = {
+                "name":student[6],
+                "barcode":student[16],
+                "original_date":student[13],
+                "original_time":student[14],
             }
-        debug_print("Read AllStudentList.csv")
+        debug_print("Read 2ndAllStudentList2.csv")
 except:
     student_map = {}
 
@@ -231,7 +230,7 @@ g = open('afterTTC.csv', 'w', encoding="utf-8")
 
 for i, applicant in enumerate(preferences):
     try:
-        student_ID = applicant[58]
+        student_ID = applicant[53]
         student = student_map[student_ID]
         g.write(student["barcode"] + ','
                 + str(student_ID) + ','
