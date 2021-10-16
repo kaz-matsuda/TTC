@@ -175,7 +175,7 @@ def run_feedback_loop(pref_matrix):
     next_matrix = pref_matrix.copy()
     matrix = next_matrix.copy()
     all_cycles, residual = run_TTC_once(matrix)
-    next_matrix = feedback(matrix, residual)
+    next_matrix = feedback(next_matrix, residual)
     new_cycles, new_cycles2, new_residual = TTC.TTC(next_matrix)
     while len(new_residual.nodes) < len(residual.nodes):
         all_cycles = new_cycles + new_cycles2
