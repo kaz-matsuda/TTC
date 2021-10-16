@@ -125,7 +125,7 @@ def read_student_list_csv():
                     "original_date":student[13],
                     "original_time":student[14],
                 }
-                debug_print("Read 2ndAllStudentList2.csv")
+            debug_print("Read 2ndAllStudentList2.csv")
     except:
         student_map = {}
     return student_map
