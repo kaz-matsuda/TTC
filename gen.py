@@ -4,7 +4,7 @@
 f = open('test.csv', 'w')
 
 number_of_applicant = 800 # 交換希望者数
-number_of_slot = 56  # 総スロット数
+number_of_slot = 51  # 総スロット数
 
 import math
 import random

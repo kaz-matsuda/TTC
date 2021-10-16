@@ -74,13 +74,13 @@ for slot in CI(1,51):
 ### Read CSVs ###
 
 try:
-    with open('preference.csv', encoding="utf-8") as pref:
-        reader = csv.reader(pref)
+    with open('preference.csv', encoding="utf-8") as f:
+        reader = csv.reader(f)
         preferences = [list(map(force_int,row)) for row in reader]
         debug_print("Read preferences.csv")
 except:
-    with open('test.csv', encoding="utf-8") as pref:
-        reader = csv.reader(pref)
+    with open('test.csv', encoding="utf-8") as f:
+        reader = csv.reader(f)
         preferences = [list(map(force_int,row)) for row in reader]
         debug_print("Read test.csv")
 
@@ -193,19 +193,20 @@ def feedback(pref, residual):
 # input: preferences
 # output: all_cycles, residual, preferences
 def run_feedback_loop(pref):
-    next_pref = pref.copy()
-    all_cycles, residual = run_TTC_once(pref)
+    old_pref = pref.copy()
+    all_cycles, residual = run_TTC_once(old_pref)
     invariant = len(pref)
-    next_pref = feedback(next_pref, residual)
+    next_pref = feedback(old_pref, residual)
     new_cycles, new_cycles2, new_residual = TTC.TTC(next_pref)
     while len(new_residual.nodes) < len(residual.nodes):
         all_cycles = new_cycles + new_cycles2
         residual = new_residual
+        old_pref = next_pref
         print("\nFeeding back..\n")
         print_TTC_result(all_cycles, residual)
-        next_pref = feedback(next_pref, residual)
+        next_pref = feedback(old_pref, residual)
         new_cycles, new_cycles2, new_residual = TTC.TTC(next_pref)
-    return all_cycles, residual, next_pref
+    return all_cycles, residual, old_pref
 
 
 ### afterTTC.csvファイルの作成 ###
