@@ -13,22 +13,15 @@ import csv
 import numpy
 import matplotlib.pyplot as plt
 
+import preference as P
 import TTC
 
-### Some utility functions ###
+### Settings
 
-def debug_print(val):
-    print(val)
+## this constant is needed for read_row()
+number_of_slots = 56
 
-# a brutality
-def force_int(val):
-    try:
-        return int(val)
-    except:
-        return 0
-
-
-### Define finite mappings from slots (1--56) to dates, times, etc. ###
+## Define finite mappings from slots (1--56) to dates, times, etc. ###
 
 # closed interval
 # NB: range(x, y) is [x, x+1, ..., y-1] and does NOT include y
@@ -74,72 +67,138 @@ for slot in CI(38,56):
 
 ### Read CSVs ###
 
-try:
-    with open('preference.csv', encoding="utf-8") as f:
-        reader = csv.reader(f)
-        preferences = [list(map(force_int,row)) for row in reader]
-        debug_print("Read preferences.csv")
-except:
-    with open('test.csv', encoding="utf-8") as f:
-        reader = csv.reader(f)
-        preferences = [list(map(force_int,row)) for row in reader]
-        debug_print("Read test.csv")
+# distinguish normal printer and debug printer
+def debug_print(val):
+    print(val)
 
-try:
-    with open('AllStudentList.csv', encoding="utf-8") as f:
-        reader = csv.reader(f)
-        student_list = [row for row in reader]
+# a brutality
+def force_int(val):
+    try:
+        return int(val)
+    except:
+        return 0
+
+# CSV row to PreferenceRow
+def read_row(row_index, csv_row, number_of_slots):
+    int_csv_row = list(map(force_int, csv_row))
+    slot = int_csv_row[0]
+    pref = int_csv_row[1:number_of_slots+1]
+    try:
+        student_ID = int_csv_row[number_of_slots+2]
+    except:
+        student_ID = None
+    return P.PreferenceRow(row_index, slot, pref, student_ID)
+
+# CSV reader
+def read_pref_csv():
+    try:
+        with open('preference.csv', encoding="utf-8") as f:
+            reader = enumerate(csv.reader(f))
+            pref_matrix = [read_row(i_row[0], i_row[1], number_of_slots)
+                           for i_row in reader]
+            debug_print("Read preferences.csv")
+    except:
+        with open('test.csv', encoding="utf-8") as f:
+            reader = enumerate(csv.reader(f))
+            pref_matrix = [read_row(i_row[0], i_row[1], number_of_slots)
+                           for i_row in reader]
+            debug_print("Read test.csv")
+    return pref_matrix
+
+# printf-test if the file is correctly read
+def test_read_pref_csv(pref_matrix):
+    for row in pref_matrix:
+        s = "{}; {}; {}; pref={}".format(
+            row.node_ID(), row.slot(), row.student_ID(), rw.preferences())
+        print(s)
+
+# The reader for the auxiliary info of students
+def read_student_list_csv():
+    try:
+        with open('AllStudentList.csv', encoding="utf-8") as f:
+            reader = csv.reader(f)
+            student_list = [row for row in reader]
+            student_map = {}
+            # a mapping from 学籍番号 to other personal data
+            # student[7] is the 学籍番号 in AllStudentList.csv
+            for student in student_list:
+                student_map[force_int(student[7])] = {
+                    "name":student[12],
+                    "barcode":student[22],
+                    "original_date":student[19],
+                    "original_time":student[20],
+                }
+                debug_print("Read AllStudentList.csv")
+    except:
         student_map = {}
-        for student in student_list:
-            student_map[force_int(student[7])] = {
-                "name":student[12],
-                "barcode":student[22],
-                "original_date":student[19],
-                "original_time":student[20],
-            }
-        debug_print("Read AllStudentList.csv")
-except:
-    student_map = {}
+    return student_map
 
 
-### Keys for sorting the input (list of persons) ###
+### TTC and feedback ###
 
-# a lexicographic key coupling the following criteria
-# 1. those who does not necessarily need an exchange is to be placed
-#    in the latter part of the sorted list
-# 2. those who offer less options of exchange should appear sooner
-def matching_difficulty(row):
-    # `row` lists the exchangable slots offered by a person.
-    # We first peek the value at the diagonal location:
-    # this value being 0 or 1 means that this person
-    # can be happy even without any change.
-    # We are going to partition the sorted list into two and place such persons
-    # in the latter part, hoping that the TTC algorithm be less likely to
-    # hit them when searching for a cycle.
-    # We should check if this strategy really works for the current algorithm,
-    # which is a simple depth-first search (see TTC.py).
-    b = 1 if row[row[0]] <= 2 else 0
-    # Next, we count the number of offered slots by this person.
-    # This is the second component of the key returned by this function,
-    # rendering the sorted list increasing in this count in each partitions.
-    # NB: we do not differentiate between 1 (strong preference) and 2 (weak) here.
-    n = sum(map(lambda x: 1 if x <= 2 else 0, row[1:]))
-    return b,n
-def sort_pref(pref):
-    return sorted(pref, key=matching_difficulty)
+# Printer for the (intermediate) results
+def print_TTC_result(all_cycles, residual):
+    print(("TTC: {} cycles found. {} nodes unmatched, namely:\n{}").format(
+        len(all_cycles),
+        len(residual.nodes),
+        sorted(residual.nodes)
+    ))
 
-# a random key used for shuffling
-def shuffling_key(row):
-    return random.randint(1,1000000)
-def shuffle_pref(pref, seed=100):
-    random.seed(seed)
-    return sorted(pref, key=shuffling_key)
+# Apply TTC once and print the intermediate result
+# This function is just TTC.TTC() with printing some info about the result
+# input: pref_matrix
+# output: all_cycles, residual
+def run_TTC_once(pref_matrix):
+    cycles, cycles2, residual = TTC.TTC(pref_matrix)
+    all_cycles = cycles + cycles2
+    print_TTC_result(all_cycles, residual)
+    return all_cycles, residual
+
+def node_IDs(pref_matrix):
+    return [row.node_ID() for row in pref_matrix]
+
+# Move to the top those rows whose indices are listed in residual.nodes
+# input: pref_matrix, residual (a graph whose nodes are (index+1) of pref_matrix)
+# output: pref_matrix 
+def feedback(pref_matrix, residual):
+    residual_row_indices = list(
+        map(lambda ID: P.row_index_of_node_ID(pref_matrix, ID),
+            residual.nodes))
+    # remove residual rows backwards from the end of pref_matrix
+    pop_indices = reversed(sorted(residual_row_indices))
+    head = []
+    for i in pop_indices:
+        head.append(pref_matrix.pop(i))
+    return head + pref_matrix
+
+# repeat TTC and feedback while the number of residuals decreases
+# input: pref_matrix
+# output: all_cycles, residual, pref_matrix
+def run_feedback_loop(pref_matrix):
+    next_matrix = pref_matrix.copy()
+    matrix = next_matrix.copy()
+    all_cycles, residual = run_TTC_once(matrix)
+    next_matrix = feedback(matrix, residual)
+    new_cycles, new_cycles2, new_residual = TTC.TTC(next_matrix)
+    while len(new_residual.nodes) < len(residual.nodes):
+        all_cycles = new_cycles + new_cycles2
+        residual = new_residual
+        matrix = next_matrix.copy()
+        print("\nFeeding back..\n")
+        print_TTC_result(all_cycles, residual)
+        next_matrix = feedback(next_matrix, residual)
+        new_cycles, new_cycles2, new_residual = TTC.TTC(next_matrix)
+    return all_cycles, residual, matrix
 
 
-### Preprocess the list according to the command-line ###
+### Execute all and afterTTC.csvファイルの作成 ###
 
+# read from the csv files
+pref_matrix = read_pref_csv()
+student_map = read_student_list_csv()
+
+# Preprocess the list according to the command-line #
 feedback_mode = False
-
 args = sys.argv[1:]
 if len(args) > 0:
     debug_print("Processing the arguments:")
@@ -151,87 +210,69 @@ while len(args) > 0:
             args.pop(0)
         except:
             seed = 100
-        preferences = shuffle_pref(preferences, seed)
-        debug_print("- shuffled the list with seed={}".format(seed))
+        pref_matrix = P.shuffle_pref(pref_matrix, seed)
+        debug_print("+ shuffled the matrix with seed={}".format(seed))
     elif a == "sort":
-        preferences = sort_pref(preferences)
-        debug_print("- sorted the list")
+        pref_matrix = P.sort_pref(pref_matrix)
+        debug_print("+ sorted the matrix")
     elif a == "feedback":
         feedback_mode = True
-        debug_print("- enabled the feedback loop")
+        debug_print("+ enabled the feedback loop")
 
-
-### TTC and feedback ###
-
-def print_TTC_result(all_cycles, residual):
-    print(("TTC: {} cycles found. {} nodes unmatched, namely:\n{}").format(
-        len(all_cycles),
-        len(residual.nodes),
-        residual.nodes
-    ))
-
-# Apply TTC once and print the intermediate result
-# This function is just TTC.TTC() with printing some info about the result
-# input: preferences
-# output: all_cycles, residual
-def run_TTC_once(pref):
-    cycles, cycles2, residual = TTC.TTC(pref)
-    all_cycles = cycles + cycles2
-    print_TTC_result(all_cycles, residual)
-    return all_cycles, residual
-
-# Move to the top those rows whose indices are listed in residual.nodes
-# input: preferences, residual (a graph whose nodes are (index+1) of preferences)
-# output: preferences 
-def feedback(pref, residual):
-    pop_indices = reversed(sorted(residual.nodes))
-    head = []
-    for i in pop_indices:
-        head.append(pref.pop(i-1))
-    return head + pref
-
-# repeat TTC and feedback while the number of residuals decreases
-# input: preferences
-# output: all_cycles, residual, preferences
-def run_feedback_loop(pref):
-    next_pref = pref.copy()
-    all_cycles, residual = run_TTC_once(pref)
-    invariant = len(pref)
-    next_pref = feedback(next_pref, residual)
-    new_cycles, new_cycles2, new_residual = TTC.TTC(next_pref)
-    while len(new_residual.nodes) < len(residual.nodes):
-        all_cycles = new_cycles + new_cycles2
-        residual = new_residual
-        print("\nFeeding back..\n")
-        print_TTC_result(all_cycles, residual)
-        next_pref = feedback(next_pref, residual)
-        new_cycles, new_cycles2, new_residual = TTC.TTC(next_pref)
-    return all_cycles, residual, next_pref
-
-
-### afterTTC.csvファイルの作成 ###
-
-# run TTC once or multiple times depending on `feedback_mode`
+# run TTC, once or multiple times depending on `feedback_mode`
 if feedback_mode:
-    all_cycles, residual, preferences = run_feedback_loop(preferences)
+    all_cycles, residual, pref_matrix = run_feedback_loop(pref_matrix)
 else:
-    all_cycles, residual = run_TTC_once(preferences)
+    all_cycles, residual = run_TTC_once(pref_matrix)
 
-# collect all edges
-cycles_or_points = []
+# collect all edges into a mapping from nodes to lists of nodes
+# Recall that an edge [A_ID, B_ID] means that B's slot is listed in A's preference
+cycles_or_points = {row.node_ID() : [] for row in pref_matrix}
 for cycle in all_cycles:
-    cycles_or_points += cycle
-# and also the isolated points, represented by virtual edges of the form `[j, -1]`
-for j in residual.nodes:
-    cycles_or_points.append([j, -1])
-# then sort them lexicographically
-cycles_or_points.sort()
+    for edge in cycle:
+        cycles_or_points[edge[0]].append(edge[1])
 
+# test if the generated cycles_or_points is consistent with pref_matrix
+def test_cycles_or_points(cycles_or_points, pref_matrix):
+    all_nodes = {row.node_ID() for row in pref_matrix}
+    residual_nodes = set(residual.nodes)
+
+    # cycles_or_points must have all nodes in pref_matrix as its domain
+    assert set(cycles_or_points.keys()) == all_nodes
+
+    for A in pref_matrix:
+        A_ID = A.node_ID()
+        A_to_which_nodes = cycles_or_points[A_ID]
+        A_to_how_many_nodes = len(A_to_which_nodes)
+        # each node may be mapped to at most one node
+        # if the node is mapped to another,
+        # the corresponding edge must exist in the original preference matrix
+        if A_to_how_many_nodes == 1:
+            B_ID = A_to_which_nodes[0]
+            B_slot = P.row_of_node_ID(pref_matrix, B_ID).slot()
+            A_prefs = A.preferred_slots()
+            assert B_slot in A_prefs
+        # if it is zero, node_ID must be in residuals
+        elif A_to_how_many_nodes == 0:
+            assert A_ID in residual_nodes
+        else:
+            assert False
+
+# Run the above test before writing to afterTTC.csv:
+# read the CSV again,
+orig_pref_matrix = read_pref_csv()
+# and test the cycles_or_points to it
+test_cycles_or_points(cycles_or_points, orig_pref_matrix)
+debug_print("Checked the consistency of the cycles")
+
+
+# generate afterTTC.csv
 g = open('afterTTC.csv', 'w', encoding="utf-8")
 
-for i, applicant in enumerate(preferences):
+for A in P.sort_for_printer(pref_matrix):
+    A_ID = A.node_ID()
     try:
-        student_ID = applicant[58]
+        student_ID = A.student_ID()
         student = student_map[student_ID]
         g.write(student["barcode"] + ','
                 + str(student_ID) + ','
@@ -240,25 +281,27 @@ for i, applicant in enumerate(preferences):
                 + student["original_time"] + ',')
     except:
         g.write('')
-    # applicant No.i の, 交換前のスロットを書き込む
-    slot = applicant[0]
+    # print A's ID
+    g.write(str(A_ID) + ',')
     # write 日付, time, min
-    g.write(day_of_slot[slot])
-    g.write(time_of_slot[slot])
+    A_slot = A.slot()
+    g.write(day_of_slot[A_slot])
+    g.write(time_of_slot[A_slot])
     g.write(':')
-    g.write('{:02}'.format(minute_of_slot[slot]))
+    g.write('{:02}'.format(minute_of_slot[A_slot]))
     # write delimiters
     g.write(',' + '->' + ',')
 
     # applicant No.i の交換が成立した場合, 交換後のスロットを書き込む
-    node_or_failure = cycles_or_points[i][1]
-    if node_or_failure != -1:
-        newslot = preferences[node_or_failure - 1][0]
-        g.write(day_of_slot[newslot])
-        g.write(time_of_slot[newslot])
+    node_or_failure = cycles_or_points[A_ID]
+    if len(node_or_failure) == 1:
+        B_ID = node_or_failure[0]
+        B_slot = P.row_of_node_ID(pref_matrix, B_ID).slot()
+        g.write(day_of_slot[B_slot])
+        g.write(time_of_slot[B_slot])
         g.write(':')
-        g.write('{:02}'.format(minute_of_slot[newslot]))
-        g.write(',' + str(node_or_failure) + '\n')
+        g.write('{:02}'.format(minute_of_slot[B_slot]))
+        g.write(',' + str(B_ID) + '\n')
     else:
         g.write('no match' + '\n')
 

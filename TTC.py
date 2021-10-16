@@ -3,6 +3,9 @@
 
 import networkx as nx
 
+import preference as P
+
+
 # Parameters
 # l : list, supposedly read from preference.csv
 
@@ -41,45 +44,41 @@ def Pull_out_all_cycles(preferenceGraph):
         cycle, residual = Pull_out_cycle(residual)
     return all_cycles, residual
 
-# input pref : list read from some CSV
+# input pref : matrix read from the preference CSV
 # output all_cycles, all_cycles2, residual
 def TTC(pref):
-    # preference data に載っている人数
-    number_of_applicants = len(pref)
     # preference データから有向グラフを作る
     preferenceGraph = nx.DiGraph()
-    # 頂点の追加(個数 = number_of_applicants)
-    i = 1
-    while i <= number_of_applicants:
-        preferenceGraph.add_node(i)
-        i = i + 1
+    # 頂点の追加
+    for row in pref:
+        preferenceGraph.add_node(row.node_ID())
     # 有向辺の追加
     # 「A の◯スロット = B の交換前のスロット」が成り立つとき, 有向辺 A -> B を追加
-    i = 1
-    while i <= number_of_applicants:
-        j = 1
-        while j <= number_of_applicants:
-            if (i != j) and (pref[i-1][pref[j-1][0]] == 1):
-                preferenceGraph.add_edge(i,j)
-            j = j + 1
-        i = i + 1
+    for A in pref:
+        A_maru = A.maru_slots()
+        A_ID = A.node_ID()
+        for B in pref:
+            B_slot = B.slot()
+            B_ID = B.node_ID()
+            if A_ID != B_ID and B_slot in A_maru:
+                preferenceGraph.add_edge(A_ID, B_ID)
     # ◯辺のサイクルの計算
     all_cycles, residual = Pull_out_all_cycles(preferenceGraph)
-    preferenceGraph2 = residual
 
     # 有向辺の追加2
+    preferenceGraph2 = residual
     # 「A の△スロット = B の交換前のスロット」が成り立つとき, 有向辺 A -> B を追加
-    already_removed_nodes = set()
-    for x in sum(sum(all_cycles, []), []):
-        already_removed_nodes.add(x)
-    i = 1
-    while i <= number_of_applicants:
-        j = 1
-        while j <= number_of_applicants:
-            if (i != j) and (pref[i-1][pref[j-1][0]] == 2)  and not({i, j} & already_removed_nodes):
-                preferenceGraph2.add_edge(i,j)
-            j = j + 1
-        i = i + 1
+    already_matched_nodes = set(sum(sum(all_cycles, []), []))
+    for A in pref:
+        if A_ID in already_matched_nodes:
+            continue
+        A_sankaku = A.sankaku_slots()
+        A_ID = A.node_ID()
+        for B in pref:
+            B_slot = B.slot()
+            B_ID = B.node_ID()
+            if not B_ID in already_matched_nodes and A_ID != B_ID and B_slot in A_sankaku:
+                preferenceGraph2.add_edge(A_ID, B_ID)
     # △辺のサイクルの計算
     all_cycles2, residual = Pull_out_all_cycles(preferenceGraph2)
     return all_cycles, all_cycles2, residual
