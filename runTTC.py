@@ -110,7 +110,7 @@ def read_student_list_csv():
             student_list = [row for row in reader]
             student_map = {}
             # a mapping from 学籍番号 to other personal data
-            # student[7] is the 学籍番号 in AllStudentList.csv
+            # student[8] is the 学籍番号 in 2ndAllStudentList2.csv
             for student in student_list:
                 student_map[force_int(student[8])] = {
                     "name":student[6],
@@ -151,9 +151,8 @@ def node_IDs(pref_matrix):
 # input: pref_matrix, residual (a graph whose nodes are (index+1) of pref_matrix)
 # output: pref_matrix 
 def feedback(pref_matrix, residual):
-    residual_row_indices = list(
-        map(lambda ID: P.row_index_of_node_ID(pref_matrix, ID),
-            residual.nodes))
+    residual_row_indices = map(lambda ID: P.row_index_of_node_ID(pref_matrix, ID),
+                               residual.nodes)
     # remove residual rows backwards from the end of pref_matrix
     pop_indices = reversed(sorted(residual_row_indices))
     head = []
@@ -209,7 +208,7 @@ while len(args) > 0:
         feedback_mode = True
         debug_print("+ enabled the feedback loop")
 
-# run TTC, once or multiple times depending on `feedback_mode`
+# run TTC, either once or multiple times depending on `feedback_mode`
 if feedback_mode:
     all_cycles, residual, pref_matrix = run_feedback_loop(pref_matrix)
 else:
@@ -217,31 +216,31 @@ else:
 
 # collect all edges into a mapping from nodes to lists of nodes
 # Recall that an edge [A_ID, B_ID] means that B's slot is listed in A's preference
-cycles_or_points = {row.node_ID() : [] for row in pref_matrix}
-inv_cycles_or_points = {row.node_ID() : [] for row in pref_matrix}
+cycle_map = {row.node_ID() : [] for row in pref_matrix}
+inv_cycle_map = {row.node_ID() : [] for row in pref_matrix}
 for cycle in all_cycles:
     for edge in cycle:
-        cycles_or_points[edge[0]].append(edge[1])
-        inv_cycles_or_points[edge[1]].append(edge[0])
+        cycle_map[edge[0]].append(edge[1])
+        inv_cycle_map[edge[1]].append(edge[0])
 
-# assert that the generated cycles_or_points is consistent with pref_matrix
-def test_cycles_or_points(cycles_or_points, pref_matrix):
+# assert that the generated cycle_map is consistent with pref_matrix
+def test_cycle_map(cycle_map, pref_matrix):
     all_nodes = {row.node_ID() for row in pref_matrix}
     residual_nodes = set(residual.nodes)
 
-    # cycles_or_points must have all nodes in pref_matrix as its domain
-    assert set(cycles_or_points.keys()) == all_nodes
+    # cycle_map must have all nodes in pref_matrix as its domain
+    assert set(cycle_map.keys()) == all_nodes
 
     for A in pref_matrix:
         A_ID = A.node_ID()
-        A_to_which_nodes = cycles_or_points[A_ID]
+        A_to_which_nodes = cycle_map[A_ID]
         A_to_how_many_nodes = len(A_to_which_nodes)
         # each node may be mapped to at most one node
         if A_to_how_many_nodes == 1:
             # if the node is mapped to another,
             # the mapping must be injective,
             B_ID = A_to_which_nodes[0]
-            assert len(inv_cycles_or_points[B_ID]) == 1
+            assert len(inv_cycle_map[B_ID]) == 1
             # and the corresponding edge must exist in the preference matrix
             B_slot = P.row_of_node_ID(pref_matrix, B_ID).slot()
             A_prefs = A.preferred_slots()
@@ -255,8 +254,8 @@ def test_cycles_or_points(cycles_or_points, pref_matrix):
 # Run the above test before writing to afterTTC.csv:
 # read the CSV again,
 orig_pref_matrix = read_pref_csv()
-# and test the cycles_or_points to it
-test_cycles_or_points(cycles_or_points, orig_pref_matrix)
+# and test the cycle_map to it
+test_cycle_map(cycle_map, orig_pref_matrix)
 debug_print("Checked the consistency of the cycles")
 
 
@@ -275,21 +274,20 @@ for A in P.sort_for_printer(pref_matrix):
                 + student["original_time"] + ',')
     except:
         g.write('')
-    # print A's ID
+    # write A'sID, 日付, time, min
     g.write(str(A_ID) + ',')
-    # write 日付, time, min
     A_slot = A.slot()
     g.write(day_of_slot[A_slot])
     g.write(time_of_slot[A_slot])
     g.write(':')
     g.write('{:02}'.format(minute_of_slot[A_slot]))
-    # write delimiters
+    # write a delimiter
     g.write(',' + '->' + ',')
 
-    # applicant No.i の交換が成立した場合, 交換後のスロットを書き込む
-    node_or_failure = cycles_or_points[A_ID]
-    if len(node_or_failure) == 1:
-        B_ID = node_or_failure[0]
+    target = cycle_map[A_ID]
+    if len(target) == 1:
+        # If A's 交換が成立した場合, 交換後のスロットを書き込む
+        B_ID = target[0]
         B_slot = P.row_of_node_ID(pref_matrix, B_ID).slot()
         g.write(day_of_slot[B_slot])
         g.write(time_of_slot[B_slot])
