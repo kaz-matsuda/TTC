@@ -102,13 +102,6 @@ def read_pref_csv():
             debug_print("Read test.csv")
     return pref_matrix
 
-# printf-test if the file is correctly read
-def test_read_pref_csv(pref_matrix):
-    for row in pref_matrix:
-        s = "{}; {}; {}; pref={}".format(
-            row.node_ID(), row.slot(), row.student_ID(), rw.preferences())
-        print(s)
-
 # The reader for the auxiliary info of students
 def read_student_list_csv():
     try:
@@ -225,11 +218,13 @@ else:
 # collect all edges into a mapping from nodes to lists of nodes
 # Recall that an edge [A_ID, B_ID] means that B's slot is listed in A's preference
 cycles_or_points = {row.node_ID() : [] for row in pref_matrix}
+inv_cycles_or_points = {row.node_ID() : [] for row in pref_matrix}
 for cycle in all_cycles:
     for edge in cycle:
         cycles_or_points[edge[0]].append(edge[1])
+        inv_cycles_or_points[edge[1]].append(edge[0])
 
-# test if the generated cycles_or_points is consistent with pref_matrix
+# assert that the generated cycles_or_points is consistent with pref_matrix
 def test_cycles_or_points(cycles_or_points, pref_matrix):
     all_nodes = {row.node_ID() for row in pref_matrix}
     residual_nodes = set(residual.nodes)
@@ -242,15 +237,17 @@ def test_cycles_or_points(cycles_or_points, pref_matrix):
         A_to_which_nodes = cycles_or_points[A_ID]
         A_to_how_many_nodes = len(A_to_which_nodes)
         # each node may be mapped to at most one node
-        # if the node is mapped to another,
-        # the corresponding edge must exist in the original preference matrix
         if A_to_how_many_nodes == 1:
+            # if the node is mapped to another,
+            # the mapping must be injective,
             B_ID = A_to_which_nodes[0]
+            assert len(inv_cycles_or_points[B_ID]) == 1
+            # and the corresponding edge must exist in the preference matrix
             B_slot = P.row_of_node_ID(pref_matrix, B_ID).slot()
             A_prefs = A.preferred_slots()
             assert B_slot in A_prefs
-        # if it is zero, node_ID must be in residuals
         elif A_to_how_many_nodes == 0:
+            # if the node is not mapped to any other, its node_ID must be in residuals
             assert A_ID in residual_nodes
         else:
             assert False
